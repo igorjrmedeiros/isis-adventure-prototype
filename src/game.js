@@ -20,88 +20,268 @@ const config = {
       debug: false,
     },
   },
+
+  scene: {
+    preload: preload,
+    create: create,
+    update: update,
+  },
 };
 
 var game = new Phaser.Game(config);
 
 var player;
 var fyresA, fyresB;
+var babyBottles;
 var staticBlock, dinamicBlock;
 
+var objectFixo;
+
+var score = 0;
+var scoreText;
+
+const MAX_MAP_TIME = 10 // quantos minutos / segundos da fase (10 segundos)
+var timeText; 
+var timeStop = false // verefica se o tempo chegou a 0, true se sim, false se nao 
+var timeEvent; //guarda o tempo contando a cada segundo
+var timeLeft = MAX_MAP_TIME  //decrementa os minutos definido
+
+var ranking = [] // guarda os pontos do score
+var addScore = 0
+var rankingText;
+
+var restartImg;
+var levelFase;
+
+var wave = 1
+var quantityWave = 3
+var waveText;
+
+
+// RODA ANTES DO JOGO COMEÇAR
 function preload() {
   this.keyA = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
   this.keyS = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
   this.keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
   this.keyW = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
   this.keyboardCursor = this.input.keyboard.createCursorKeys();
+
+  this.load.image("isis", "src/assets/isis-48x48.png");
+  this.load.image("bottle", "src/assets/baby-bottle.png");
+
+  this.load.image("object", "src/assets/platform.png");
+
+  this.load.image("restart", "src/assets/restart.png")
+  this.load.image('game-over', "src/assets/game-over.png")
+  this.load.image("vitory", "src/assets/vitory.png")
 }
 
 function create() {
   var camera = this.cameras.main;
-  var timeValue = "0:00";
-  var scoreValue = 0;
+  
+  if (wave === 1) {
+    camera.setBackgroundColor("#ffb969");
 
-  camera.setBackgroundColor("#ffb969");
+      // GRUPOS DE MAMADEIRAS
+    babyBottles = this.physics.add.group();
 
-  var timeText = this.add.text(
-    game.config.width / 2,
-    20,
-    "Time: " + timeValue,
-    { fontFamily: "Arial", fontSize: 20, color: "#ff00fb" },
-  );
+    babyBottles.create(200, 200, "bottle");
+    babyBottles.create(300, 300, "bottle");
+    babyBottles.create(500, 100, "bottle");
+    babyBottles.create(700, 500, "bottle");
+    babyBottles.create(600, 400, "bottle");
+    babyBottles.create(500, 600, "bottle");
+    babyBottles.create(100, 700, "bottle");
+    babyBottles.create(750, 100, "bottle");
+
+      // OBJETOS FIXOS
+    objectFixo = this.physics.add.staticGroup();
+
+    objectFixo.create(200, 250, "object");
+    objectFixo.create(400, 250, "object");
+    objectFixo.create(200, 450, "object");
+    objectFixo.create(700, 650, "object");
+  }
+
+  if (wave === 2) {
+    camera.setBackgroundColor("#153a55");
+
+      // GRUPOS DE MAMADEIRAS
+    babyBottles = this.physics.add.group();
+
+    babyBottles.create(200, 200, "bottle");
+    babyBottles.create(300, 300, "bottle");
+    babyBottles.create(500, 100, "bottle");
+    babyBottles.create(700, 500, "bottle");
+    babyBottles.create(600, 400, "bottle");
+    babyBottles.create(500, 600, "bottle");
+    babyBottles.create(100, 700, "bottle");
+    babyBottles.create(750, 100, "bottle");
+
+      // OBJETOS FIXOS
+    objectFixo = this.physics.add.staticGroup();
+
+    objectFixo.create(400, 250, "object");
+    objectFixo.create(400, 450, "object");
+    objectFixo.create(400, 650, "object");
+  }
+
+  if (wave === 3) {
+    camera.setBackgroundColor("#3c641b");
+
+      // GRUPOS DE MAMADEIRAS
+    babyBottles = this.physics.add.group();
+
+    babyBottles.create(200, 200, "bottle");
+    babyBottles.create(300, 300, "bottle");
+    babyBottles.create(500, 100, "bottle");
+    babyBottles.create(700, 500, "bottle");
+    babyBottles.create(600, 400, "bottle");
+    babyBottles.create(500, 600, "bottle");
+    babyBottles.create(100, 700, "bottle");
+    babyBottles.create(750, 100, "bottle");
+
+      // OBJETOS FIXOS
+    objectFixo = this.physics.add.staticGroup();
+
+    objectFixo.create(-100, 250, "object");
+    objectFixo.create(900, 250, "object");
+    objectFixo.create(-100, 450, "object");
+    objectFixo.create(900, 450, "object");
+    objectFixo.create(900, 650, "object");
+    objectFixo.create(-100, 650, "object");
+    objectFixo.create(400, 650, "object");
+    objectFixo.create(400, 450, "object");
+    objectFixo.create(400, 250, "object");
+  }
+
+    //WAVE
+  waveText = this.add.text(700, 20, 'Wave: ' + wave, {
+    fontFamily: "Arial",
+    fontSize: "20px",
+    color: "#ff004c",
+  })
+
+    //TIMER
+  timeText = this.add.text(game.config.width / 2, 20, "Time: " + MAX_MAP_TIME, {
+    fontFamily: "Arial",
+    fontSize: '20px',
+    color: "#ff00fb",
+  });
   timeText.setOrigin(0.5, 0);
 
-  var scoreText = this.add.text(30, 20, "Score: " + scoreValue, {
+  
+  // SCORE
+  scoreText = this.add.text(10, 20, "Score: " + score, {
     fontFamily: "Arial",
-    fontSize: 20,
+    fontSize: "20px",
     color: "#8000ff",
   });
 
-  player = this.add.circle(100, 200, 24, 0xe732c8);
-  //const playerStyle = this.add.graphics({ fillStyle: { color: 0xe732c8 } });
-  //playerStyle.fillCircleShape(player);
+  
+   // ISIS 
+  player = this.physics.add.sprite(30, 100, "isis");
+  player.setCollideWorldBounds(true);
+ 
 
-  fyresA = this.add.rectangle(100, 300, 48, 48);
-  const fyresAStyle = this.add.graphics({ fillStyle: { color: 0x921818 } });
-  fyresAStyle.fillRectShape(fyresA);
+  // COLISÃO E COLETA
+  this.physics.add.overlap(player, babyBottles, collectBottle, null, this);
+  this.physics.add.collider(player, objectFixo);
 
-  fyresB = this.add.rectangle(100, 400, 48, 48);
-  const fyresBStyle = this.add.graphics({ fillStyle: { color: 0x1843c4 } });
-  fyresBStyle.fillRectShape(fyresB);
 
-  staticBlock = this.add.rectangle(100, 500, 48, 48);
-  const staticBlockStyle = this.add.graphics({
-    fillStyle: { color: 0xac590b },
-    lineStyle: { color: 0x000000 },
+
+    //TIME
+  //this.time relogio phaser
+  //addEvent: executar algo baseado em tempo
+  timeEvent = this.time.addEvent({
+    delay: 1000, // esperar 1 segundo para executar o evento
+    callback: updateTimer, // função que é chamada, executada
+    callbackScope: this, // sem isso no updateTimer, o this vira undefined (this.physics.pause() quebra). this = scene do jogo
+    loop: true, //repete infinitamente
   });
-  staticBlockStyle.fillRectShape(staticBlock);
-  staticBlockStyle.strokeRectShape(staticBlock);
-
-  dinamicBlock = this.add.rectangle(100, 600, 48, 48);
-  const dinamicBlockStyle = this.add.graphics({
-    fillStyle: { color: 0xac590b },
-    lineStyle: { color: 0x00ff00 },
-  });
-  dinamicBlockStyle.fillRectShape(dinamicBlock);
-  dinamicBlockStyle.strokeRectShape(dinamicBlock);
 }
 
+
 function update() {
-
   if (this.keyW.isDown) {
-    player.y -= 2;
+    player.setVelocityY(-200);
+  } else if (this.keyA.isDown) {
+    player.setVelocityX(-200);
+  } else if (this.keyS.isDown) {
+    player.setVelocityY(200);
+  } else if (this.keyD.isDown) {
+    player.setVelocityX(200);
+  } else {
+    player.setVelocityX(0);
+    player.setVelocityY(0);
   }
-  if (this.keyA.isDown) {
-    player.x -= 2;
-  }
-  if (this.keyS.isDown) {
-    player.y += 2;
-  }
-  if (this.keyD.isDown) {
-    player.x += 2;
+}
+
+
+// coleção com mamadeira
+function collectBottle(player, babyBottles) {
+  babyBottles.destroy();
+
+  score += 20;
+  scoreText.setText("Score: " + score);
+}
+
+
+//CRONOMETRO
+function updateTimer() {
+  timeLeft--;
+
+  timeText.setText("Time: " + timeLeft);
+
+  if (timeLeft <= 0) {
+    timeEvent.remove()
+    this.physics.pause();
+    timeText.setText("Time: " + timeLeft);
+
+    timeStop = true
   }
 
-  console.log(player.x, player.y)
+  if (timeStop === true) {
+    
+    if(score === 0) {
+      levelFase = this.add.image(400,210, "game-over")
+
+      restartImg = this.physics.add.sprite(400, 420, "restart").setInteractive();
+      restartImg.on('pointerdown', () => {
+        this.scene.restart();
+        timeStop = false
+        timeLeft = MAX_MAP_TIME
+        score = 0
+      });
+    } 
+    
+    if(score > 0) {
+      ranking.push(score)
+      wave += 1
+
+      if (wave <= quantityWave) {
+        this.scene. restart()
+        timeStop = false
+        timeLeft = MAX_MAP_TIME
+        score = 0
+      } 
+      
+      else {
+        levelFase = this.add.image(400, 210, "vitory")
+
+        for(let i = 0; i < ranking.length; i++) {
+          addScore += ranking[i]
+        }
+
+        rankingText = this.add.text(300, 400, "Total: " + addScore, {
+          fontSize: '50px', 
+          fontFamily: 'Arial',
+          color: "#ff7b00",
+        })
+      }
+    }
+
+  }
 }
 
 /*
