@@ -36,11 +36,12 @@ var babyBottles;
 var staticBlock, dinamicBlock;
 
 var objectFixo;
+var objectMove;
 
 var score = 0;
 var scoreText;
 
-const MAX_MAP_TIME = 10 // quantos minutos / segundos da fase (10 segundos)
+const MAX_MAP_TIME = 500 // quantos minutos / segundos da fase (10 segundos)
 var timeText; 
 var timeStop = false // verefica se o tempo chegou a 0, true se sim, false se nao 
 var timeEvent; //guarda o tempo contando a cada segundo
@@ -74,6 +75,8 @@ function preload() {
   this.load.image("restart", "src/assets/restart.png")
   this.load.image('game-over', "src/assets/game-over.png")
   this.load.image("vitory", "src/assets/vitory.png")
+
+  this.load.image("objectMove", "src/assets/objMove.png")
 }
 
 function create() {
@@ -178,19 +181,27 @@ function create() {
     color: "#8000ff",
   });
 
+
+  objectMove = this.physics.add.sprite(150, 100, 'objectMove')
+  objectMove.setCollideWorldBounds(true) //colidir/ nao sair do mapa
+  objectMove.setPushable(true) // isso aqui é o segredo, ele que faz empurrar 
+  //objectMove.body.setAllowGravity(false)
+  objectMove.setDrag(1000) // faz parar de "andar" quando é empurrado
+  objectMove.setImmovable(false) // so uma garantia de fazer ele se mover
+
   
-   // ISIS 
+  // ISIS 
   player = this.physics.add.sprite(30, 100, "isis");
   player.setCollideWorldBounds(true);
  
 
   // COLISÃO E COLETA
   this.physics.add.overlap(player, babyBottles, collectBottle, null, this);
-  this.physics.add.collider(player, objectFixo);
+  this.physics.add.collider(player, objectFixo); 
+  this.physics.add.collider(objectMove, objectFixo) 
+  this.physics.add.collider(player, objectMove); 
 
-
-
-    //TIME
+  //TIME
   //this.time relogio phaser
   //addEvent: executar algo baseado em tempo
   timeEvent = this.time.addEvent({
