@@ -1,7 +1,7 @@
 const config = {
   type: Phaser.AUTO,
-  width: 800,
-  height: 800,
+  width: 960,
+  height: 768,
   scene: {
     preload: preload,
     create: create,
@@ -58,6 +58,26 @@ var wave = 1
 var quantityWave = 3
 var waveText;
 
+const pixelSize = 48 // pixels
+const totalRows = game.canvas.width / pixelSize
+const totalColumns = game.canvas.height / pixelSize
+
+var gridArray = []
+
+var gridNumber = 0
+
+var gridMap = new Map()
+
+var graphics
+
+var gridCreated = false
+
+var path = []
+
+var tweenFyre = null
+
+var currentPathIndex = 0
+
 
 // RODA ANTES DO JOGO COMEÇAR
 function preload() {
@@ -68,6 +88,7 @@ function preload() {
   this.keyboardCursor = this.input.keyboard.createCursorKeys();
 
   this.load.image("isis", "src/assets/isis-48x48.png");
+  this.load.image("fyres", "src/assets/fyres.png");
   this.load.image("bottle", "src/assets/baby-bottle.png");
 
   this.load.image("object", "src/assets/platform.png");
@@ -80,6 +101,10 @@ function preload() {
 }
 
 function create() {
+  if (gridMap)
+
+  graphics = this.add.graphics();
+
   var camera = this.cameras.main;
   
   if (wave === 1) {
@@ -181,7 +206,6 @@ function create() {
     color: "#8000ff",
   });
 
-
   objectMove = this.physics.add.sprite(150, 100, 'objectMove')
   objectMove.setCollideWorldBounds(true) //colidir/ nao sair do mapa
   objectMove.setPushable(true) // isso aqui é o segredo, ele que faz empurrar 
@@ -191,8 +215,16 @@ function create() {
 
   
   // ISIS 
-  player = this.physics.add.sprite(30, 100, "isis");
+  player = this.physics.add.sprite(60, 100, "isis");
   player.setCollideWorldBounds(true);
+
+  // Fyres A
+  fyresA = this.physics.add.sprite(748, 700, "fyres")
+  fyresA.setCollideWorldBounds(true);
+  fyresA.isMoving = false
+  fyresA.velocityA = 0
+
+  //this.physics.add.collider(fyresA, objectFixo);
  
 
   // COLISÃO E COLETA
@@ -200,6 +232,8 @@ function create() {
   this.physics.add.collider(player, objectFixo); 
   this.physics.add.collider(objectMove, objectFixo) 
   this.physics.add.collider(player, objectMove); 
+
+  createGrid(this)
 
   //TIME
   //this.time relogio phaser
@@ -211,23 +245,41 @@ function create() {
     loop: true, //repete infinitamente
   });
 }
-
-
+ 
 function update() {
+
+  player.setVelocityX(0);
+  player.setVelocityY(0);
+
   if (this.keyW.isDown) {
     player.setVelocityY(-200);
-  } else if (this.keyA.isDown) {
-    player.setVelocityX(-200);
-  } else if (this.keyS.isDown) {
-    player.setVelocityY(200);
-  } else if (this.keyD.isDown) {
-    player.setVelocityX(200);
-  } else {
-    player.setVelocityX(0);
-    player.setVelocityY(0);
   }
-}
+  if (this.keyA.isDown) {
+    player.setVelocityX(-200);
+  }
+  if (this.keyS.isDown) {
+    player.setVelocityY(200);
+  }
+  if (this.keyD.isDown) {
+    player.setVelocityX(200);
+  }
 
+  fyresA.setVelocityX(0);
+  fyresA.setVelocityY(0);
+
+  if (gridCreated) {
+
+    var playerGridPosition = {x: Math.floor(player.y / pixelSize), y: Math.floor(player.x / pixelSize)}
+    var playerGridNumber = gridArray[playerGridPosition.x][playerGridPosition.y]
+
+    var fyreAGridPosition = {x: Math.floor(fyresA.y / pixelSize), y: Math.floor(fyresA.x / pixelSize)}
+    var fyreAGridNumber = gridArray[fyreAGridPosition.x][fyreAGridPosition.y]
+
+    a_star(fyreAGridNumber, playerGridNumber)
+
+  }
+
+}
 
 // coleção com mamadeira
 function collectBottle(player, babyBottles) {
@@ -236,7 +288,6 @@ function collectBottle(player, babyBottles) {
   score += 20;
   scoreText.setText("Score: " + score);
 }
-
 
 //CRONOMETRO
 function updateTimer() {
@@ -295,6 +346,134 @@ function updateTimer() {
   }
 }
 
+function createGrid(scene)
+{
+ for (let rowNumber = 0; rowNumber < totalColumns; rowNumber++) {
+  gridArray[rowNumber] = []
+    for (let columnNumber = 0; columnNumber < totalRows; columnNumber++) {
+      const x = columnNumber * pixelSize
+      const y = rowNumber * pixelSize
+
+      graphics.lineStyle(2, "black", 1);
+      graphics.strokeRect(x, y, pixelSize, pixelSize)
+
+      scene.add.text(x + pixelSize/2,y + pixelSize/2, gridNumber, { color: 'black', align: 'center' })
+      .setOrigin(0.5,0.5)
+      .depth = -1
+
+      gridArray[rowNumber][columnNumber] = {position: gridNumber, type: 0, g: 0, h: 0, f: 0, parent: null, x: x, y: y}
+      gridMap.set(gridNumber, gridArray[rowNumber][columnNumber])
+
+      gridNumber++
+
+    } 
+ }
+
+ gridCreated = true
+}
+
+
+function a_star(start, end) {
+
+    let listaAberta = [start]
+    let listaFechada = []
+    let celulaAtual = listaAberta[0]
+
+    start.g = 0
+    start.h = distancia(start, end)
+    start.f = start.g + start.h
+    start.parent = null
+
+    while (listaAberta.length > 0)
+    {
+        let melhorIndex = 0
+        for(let index = 0; index < listaAberta.length; index++) {
+            if (listaAberta[melhorIndex].f > listaAberta[index].f) {
+                // menor f
+                melhorIndex = index
+                celulaAtual = listaAberta[melhorIndex]
+            }
+        }
+
+        if (celulaAtual === end)
+        {
+            // console.log("Chegamos... Sucesso!")
+            break
+        }
+
+        listaFechada.push(listaAberta[melhorIndex])
+        listaAberta.splice(melhorIndex, 1)
+
+
+        // logica da vizinhaça
+    
+        let vizinhos = new Array(8)
+        vizinhos[0] = gridMap.get(celulaAtual.position + 1)
+        vizinhos[1] = gridMap.get(celulaAtual.position - 1) 
+        vizinhos[2] = gridMap.get(celulaAtual.position - 20) 
+        vizinhos[3] = gridMap.get(celulaAtual.position + 20)
+        vizinhos[4] = gridMap.get(celulaAtual.position - 19)  
+        vizinhos[5] = gridMap.get(celulaAtual.position + 21) 
+        vizinhos[6] = gridMap.get(celulaAtual.position - 21) 
+        vizinhos[7] = gridMap.get(celulaAtual.position + 19)      
+        
+        for (let index = 0; index < vizinhos.length; index++) {
+            const element = vizinhos[index];
+
+            if (listaFechada.includes(element)) continue;
+
+            let custoG = celulaAtual.g + distancia(celulaAtual, vizinhos[index])
+
+            if (!listaAberta.includes(element))
+            {
+                listaAberta.push(element)
+            } else if (custoG >= element.g) {
+                continue
+            }
+
+            vizinhos[index].parent = celulaAtual
+            vizinhos[index].g = custoG
+            vizinhos[index].h = distancia(vizinhos[index], end)
+            vizinhos[index].f = vizinhos[index].g + vizinhos[index].h
+
+        }
+
+        // direita = atual + 1
+        // esquerda = atual - 1
+        // cima = atual - 20
+        // baixo = atual + 20
+        // direita-cima = atual - 19
+        // direita-baixo = atual + 21
+        // esquerda-cima = atual - 21
+        // esquerda-baixa = atual + 19
+
+    }
+
+    path = []
+    while (celulaAtual != null) {
+        path.push(celulaAtual)
+        celulaAtual = celulaAtual.parent
+    }
+
+    path.reverse()
+
+}
+
+function distancia(start, end) {
+    let deltaX = Math.abs(start.x - end.x)
+    let deltaY = Math.abs(start.y - end.y)
+
+    var distancia = Math.max(deltaX, deltaY) + (Math.SQRT2 - 1) * Math.min(deltaX, deltaY)
+
+    return distancia
+}
+
+
+
+
+
+
+
 /*
 Mapa:
 960 x 960
@@ -302,11 +481,11 @@ Fundo bege
 
 Isis: Quadrado   -> Rosa
 Fyres: Quadrado 
-  Anda aleatorio -> Vermelho
-  Persegue       -> Azul
+Anda aleatorio -> Vermelho
+Persegue       -> Azul
 Blocos: Retangulos
-  Que movimentam -> Verde
-  Estáticos      -> Marrom
+Que movimentam -> Verde
+Estáticos      -> Marrom
 
 Score: texto simples
 
