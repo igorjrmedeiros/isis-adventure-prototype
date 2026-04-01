@@ -41,9 +41,9 @@ var objectMove;
 var score = 0;
 var scoreText;
 
-const MAX_MAP_TIME = 500 // quantos minutos / segundos da fase (10 segundos)
+const MAX_MAP_TIME = 500 // minutos da fase 
 var timeText; 
-var timeStop = false // verefica se o tempo chegou a 0, true se sim, false se nao 
+var timeStop = false // false se chegou no tempo 0
 var timeEvent; //guarda o tempo contando a cada segundo
 var timeLeft = MAX_MAP_TIME  //decrementa os minutos definido
 
@@ -64,19 +64,19 @@ const totalColumns = game.canvas.height / pixelSize
 
 var gridArray = []
 
-var gridNumber = 0
+var gridNumber = 0 //numero da grade 
 
 var gridMap = new Map()
 
-var graphics
+var graphics //graficos
 
-var gridCreated = false
+var gridCreated = false //gradeCriada
 
-var path = []
+var path = [] //caminho
 
 var tweenFyre = null
 
-var currentPathIndex = 0
+var currentPathIndex = 0 //caminhoAtualIndex
 
 
 // RODA ANTES DO JOGO COMEÇAR
@@ -101,9 +101,9 @@ function preload() {
 }
 
 function create() {
-  if (gridMap)
-
-  graphics = this.add.graphics();
+  if (gridMap) {
+    graphics = this.add.graphics();
+  }
 
   var camera = this.cameras.main;
   
@@ -208,26 +208,24 @@ function create() {
 
   objectMove = this.physics.add.sprite(150, 100, 'objectMove')
   objectMove.setCollideWorldBounds(true) //colidir/ nao sair do mapa
-  objectMove.setPushable(true) // isso aqui é o segredo, ele que faz empurrar 
+  objectMove.setPushable(true) // Faz empurrar
   //objectMove.body.setAllowGravity(false)
-  objectMove.setDrag(1000) // faz parar de "andar" quando é empurrado
-  objectMove.setImmovable(false) // so uma garantia de fazer ele se mover
+  objectMove.setDrag(1000) //para de "andar" quando é empurrado
+  objectMove.setImmovable(false) // garantia de fazer ele se mover
 
   
   // ISIS 
   player = this.physics.add.sprite(60, 100, "isis");
   player.setCollideWorldBounds(true);
 
-  // Fyres A
+  // FYRES A
   fyresA = this.physics.add.sprite(748, 700, "fyres")
   fyresA.setCollideWorldBounds(true);
   fyresA.isMoving = false
   fyresA.velocityA = 0
 
-  //this.physics.add.collider(fyresA, objectFixo);
- 
-
   // COLISÃO E COLETA
+  //this.physics.add.collider(fyresA, objectFixo);
   this.physics.add.overlap(player, babyBottles, collectBottle, null, this);
   this.physics.add.collider(player, objectFixo); 
   this.physics.add.collider(objectMove, objectFixo) 
@@ -276,12 +274,10 @@ function update() {
     var fyreAGridNumber = gridArray[fyreAGridPosition.x][fyreAGridPosition.y]
 
     a_star(fyreAGridNumber, playerGridNumber)
-
   }
-
 }
 
-// coleção com mamadeira
+// COLEÇAO COM MAMADEIRAS 
 function collectBottle(player, babyBottles) {
   babyBottles.destroy();
 
@@ -289,7 +285,7 @@ function collectBottle(player, babyBottles) {
   scoreText.setText("Score: " + score);
 }
 
-//CRONOMETRO
+// CRONOMETRO
 function updateTimer() {
   timeLeft--;
 
@@ -342,12 +338,12 @@ function updateTimer() {
         })
       }
     }
-
   }
 }
 
-function createGrid(scene)
-{
+// criarGrade
+function createGrid(scene) {
+
  for (let rowNumber = 0; rowNumber < totalColumns; rowNumber++) {
   gridArray[rowNumber] = []
     for (let columnNumber = 0; columnNumber < totalRows; columnNumber++) {
@@ -365,14 +361,13 @@ function createGrid(scene)
       gridMap.set(gridNumber, gridArray[rowNumber][columnNumber])
 
       gridNumber++
-
     } 
- }
+  }
 
  gridCreated = true
 }
 
-
+// Algoritmo. Caminho de menor custo 
 function a_star(start, end) {
 
     let listaAberta = [start]
