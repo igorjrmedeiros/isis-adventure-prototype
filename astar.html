@@ -29,163 +29,173 @@
     <button id="butB">BT B</button>
 
     <script>
-      const canvas = document.getElementById("tutorial");
-      canvas.addEventListener("click", onCanvasClick);
-      const ctx = canvas.getContext("2d");
+      const canvas = document.getElementById("tutorial")
+      canvas.addEventListener("click", onCanvasClick)
+      const ctx = canvas.getContext("2d")
 
-      const BotaoA = document.getElementById("butA");
-      const BotaoB = document.getElementById("butB");
+      const BotaoA = document.getElementById("butA")
+      const BotaoB = document.getElementById("butB")
 
-      const MAX_GRID_ROWS = 20;
-      const MAX_GRID_COLUMNS = 16;
-      const GRID_PIXEL_SIZE = 48;
+      const MAX_GRID_ROWS = 20
+      const MAX_GRID_COLUMNS = 16
+      const GRID_PIXEL_SIZE = 48
 
-      var gridArray = new Array();
-      var mapGrid = new Map();
+      var gridArray = new Array()
+      var mapGrid = new Map()
+      var path = new Array()
 
-      var playerInitialPosition = 280;
-      var npcInitialPosition = 39;
-      let gridCellNumber = 0;
-      let gridCreated = false;
+      var playerInitialPosition = 287
+      var npcInitialPosition = 21
+      let gridCellNumber = 0
+      let gridCreated = false
 
-      drawGrid();
+      drawGrid()
 
-      let inicio = mapGrid.get(npcInitialPosition);
-      let fim = mapGrid.get(playerInitialPosition);
+      let inicio = mapGrid.get(npcInitialPosition)
+      let fim = mapGrid.get(playerInitialPosition)
 
-      a_star(inicio, fim);
+      a_star(inicio, fim)
 
       function drawGrid() {
         //limpa o grid inteiro
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        gridCellNumber = 0;
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        gridCellNumber = 0
 
         for (let column = 0; column < MAX_GRID_COLUMNS; column++) {
+          if (!gridArray[column]) {
+            gridArray[column] = []
+          }
+
           for (let row = 0; row < MAX_GRID_ROWS; row++) {
-            const x = row * GRID_PIXEL_SIZE;
-            const y = column * GRID_PIXEL_SIZE;
+            const x = row * GRID_PIXEL_SIZE
+            const y = column * GRID_PIXEL_SIZE
 
-            const xText = x + GRID_PIXEL_SIZE / 2;
-            const yText = y + GRID_PIXEL_SIZE / 2;
+            const xText = x + GRID_PIXEL_SIZE / 2
+            const yText = y + GRID_PIXEL_SIZE / 2
 
-            drawRect("stroke", x, y, GRID_PIXEL_SIZE, GRID_PIXEL_SIZE, "black");
-            writeText(xText, yText, gridCellNumber, 18, "black");
+            drawRect("stroke", x, y, GRID_PIXEL_SIZE, GRID_PIXEL_SIZE, "black")
+            writeText(xText, yText, gridCellNumber, 18, "black")
 
-            gridArray[column][row] = {
-              position: gridCellNumber,
-              type: 0,
-              g: 0,
-              h: 0,
-              f: 0,
-              parent: null,
-              x: x,
-              y: y,
-              indexX: column,
-              indexY: row,
-            };
-
-            mapGrid.set(gridCellNumber, gridArray[column][row]);
+            // as proximas duas funcoes não devem fazer parte da funcao drawGrid, mas para fins de teste e prototipagem, estão aqui mesmo
+            // temos que definir um novo local que tenha a responsabilidade de inicializar o grid como objeto, assim como definir o mapGrid.
+            if (!gridArray[column][row]) {
+              gridArray[column][row] = {
+                position: gridCellNumber,
+                type: 0,
+                g: 0,
+                h: 0,
+                f: 0,
+                parent: null,
+                x: x,
+                y: y,
+                indexX: column,
+                indexY: row,
+              }
+            }
+            mapGrid.set(gridCellNumber, gridArray[column][row])
 
             if (gridArray[column][row].position === playerInitialPosition) {
-              gridArray[column][row].type = 3;
-              drawRect("fill", x, y, GRID_PIXEL_SIZE, GRID_PIXEL_SIZE, "red");
-              writeText(xText, yText, gridCellNumber, 18, "black");
+              gridArray[column][row].type = 3
+              drawRect("fill", x, y, GRID_PIXEL_SIZE, GRID_PIXEL_SIZE, "red")
+              writeText(xText, yText, gridCellNumber, 18, "black")
             }
 
             if (gridArray[column][row].position === npcInitialPosition) {
-              gridArray[column][row].type = 4;
-              drawRect("fill", x, y, GRID_PIXEL_SIZE, GRID_PIXEL_SIZE, "blue");
-              writeText(xText, yText, gridCellNumber, 18, "black");
+              gridArray[column][row].type = 4
+              drawRect("fill", x, y, GRID_PIXEL_SIZE, GRID_PIXEL_SIZE, "blue")
+              writeText(xText, yText, gridCellNumber, 18, "black")
             }
 
-            gridCellNumber++;
+            // Checa as células que são type 1 e coloca a cor cinza
+            if (gridArray[column][row].type === 1) {
+              drawRect("fill", x, y, GRID_PIXEL_SIZE, GRID_PIXEL_SIZE, "rgba(145, 145, 145, 0.80)")
+              drawRect("stroke", x, y, GRID_PIXEL_SIZE, GRID_PIXEL_SIZE, "black")
+              writeText(xText, yText, gridCellNumber, 18, "red")
+            }
 
-            gridCreated = true;
+            gridCellNumber++
+            gridCreated = true
           }
         }
+
+        if (path.length > 0) {
+          path.forEach((value) => {
+            ctx.fillStyle = "rgba(145, 145, 145, 0.50)"
+            ctx.fillRect(value.x, value.y, 48, 48)
+          })
+        }
+
+        console.log(gridArray)
+        console.log(mapGrid)
+        console.log(path)
       }
 
       function writeText(posX, posY, text, fontSize, color) {
-        ctx.font = fontSize + "px serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillStyle = color;
-        ctx.fillText(text, posX, posY);
+        ctx.font = fontSize + "px serif"
+        ctx.textAlign = "center"
+        ctx.textBaseline = "middle"
+        ctx.fillStyle = color
+        ctx.fillText(text, posX, posY)
       }
 
       function drawRect(type, posX, posY, rectSizeX, rectSizeY, color) {
-        ctx.fillStyle = color;
-        if (type == "stroke") ctx.strokeRect(posX, posY, rectSizeX, rectSizeY);
+        ctx.fillStyle = color
+        if (type == "stroke") ctx.strokeRect(posX, posY, rectSizeX, rectSizeY)
 
-        if (type === "fill") ctx.fillRect(posX, posY, rectSizeX, rectSizeY);
+        if (type === "fill") ctx.fillRect(posX, posY, rectSizeX, rectSizeY)
       }
 
       function onCanvasClick(e) {
-        let posicaox = Math.floor(e.y / GRID_PIXEL_SIZE);
-        let posicaoy = Math.floor(e.x / GRID_PIXEL_SIZE);
+        let posicaox = Math.floor(e.y / GRID_PIXEL_SIZE)
+        let posicaoy = Math.floor(e.x / GRID_PIXEL_SIZE)
 
-        let x = posicaoy * GRID_PIXEL_SIZE;
-        let y = posicaox * GRID_PIXEL_SIZE;
+        let x = posicaoy * GRID_PIXEL_SIZE
+        let y = posicaox * GRID_PIXEL_SIZE
 
         if (gridArray[posicaox][posicaoy].type === 0) {
-          gridArray[posicaox][posicaoy].type = 1;
-
-          ctx.fillStyle = "rgba(145, 145, 145, 0.80)";
-          ctx.fillRect(x, y, GRID_PIXEL_SIZE, GRID_PIXEL_SIZE);
-          ctx.strokeRect(x, y, GRID_PIXEL_SIZE, GRID_PIXEL_SIZE);
-
-          ctx.fillStyle = "red";
-          ctx.fillText(
-            gridArray[posicaox][posicaoy].position,
-            x + GRID_PIXEL_SIZE / 2,
-            y + GRID_PIXEL_SIZE / 2,
-          );
+          gridArray[posicaox][posicaoy].type = 1
         } else {
-          gridArray[posicaox][posicaoy].type = 0;
-
-          ctx.fillStyle = "white";
-          ctx.fillRect(x, y, GRID_PIXEL_SIZE, GRID_PIXEL_SIZE);
-
-          ctx.fillStyle = "black";
-          ctx.strokeRect(x, y, GRID_PIXEL_SIZE, GRID_PIXEL_SIZE);
-          ctx.fillText(
-            gridArray[posicaox][posicaoy].position,
-            x + GRID_PIXEL_SIZE / 2,
-            y + GRID_PIXEL_SIZE / 2,
-          );
+          gridArray[posicaox][posicaoy].type = 0
         }
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        a_star(inicio, fim);
+        a_star(inicio, fim)
       }
 
       function a_star(start, end) {
-        let listaAberta = [start];
-        let listaFechada = [];
-        let celulaAtual = listaAberta[0];
+        let listaAberta = [start]
+        let listaFechada = []
+        let celulaAtual = listaAberta[0]
 
-        start.g = 0;
-        start.h = distancia(start, end);
-        start.f = start.g + start.h;
-        start.parent = null;
+        start.g = 0
+        start.h = distancia(start, end)
+        start.f = start.g + start.h
+        start.parent = null
 
         while (listaAberta.length > 0) {
-          let melhorIndex = 0;
+          let melhorIndex = 0
           for (let index = 0; index < listaAberta.length; index++) {
             if (listaAberta[melhorIndex].f > listaAberta[index].f) {
               // menor f
-              melhorIndex = index;
-              celulaAtual = listaAberta[melhorIndex];
+              melhorIndex = index
+              celulaAtual = listaAberta[melhorIndex]
+            }
+
+            if (listaAberta[melhorIndex].f === listaAberta[index].f) {
+              if (listaAberta[melhorIndex].h > listaAberta[index].h) {
+                // menor h
+                melhorIndex = index
+                celulaAtual = listaAberta[melhorIndex]
+              }
             }
           }
 
           if (celulaAtual === end) {
-            console.log("Chegamos... Sucesso!");
-            break;
+            console.log("Chegamos... Sucesso!")
+            break
           }
 
-          listaFechada.push(listaAberta[melhorIndex]);
-          listaAberta.splice(melhorIndex, 1);
+          listaFechada.push(listaAberta[melhorIndex])
+          listaAberta.splice(melhorIndex, 1)
 
           let directions = [
             [0, 1],
@@ -196,15 +206,15 @@
             [1, -1],
             [-1, 1],
             [-1, -1],
-          ];
+          ]
 
-          let vizinhos = new Array(8);
+          let vizinhos = new Array(8)
           for (let index = 0; index < vizinhos.length; index++) {
-            let rowDirection = directions[index][0];
-            let columnDirection = directions[index][1];
+            let rowDirection = directions[index][0]
+            let columnDirection = directions[index][1]
 
-            let nextRowIndex = celulaAtual.indexX + rowDirection;
-            let nextColumnIndex = celulaAtual.indexY + columnDirection;
+            let nextRowIndex = celulaAtual.indexX + rowDirection
+            let nextColumnIndex = celulaAtual.indexY + columnDirection
 
             if (
               nextRowIndex >= MAX_GRID_COLUMNS ||
@@ -212,59 +222,64 @@
               nextRowIndex < 0 ||
               nextColumnIndex < 0
             )
-              continue;
+              continue
 
-            vizinhos[index] = gridArray[nextRowIndex][nextColumnIndex];
+            vizinhos[index] = gridArray[nextRowIndex][nextColumnIndex]
 
-            if (vizinhos[index].type === 1) vizinhos[index] = null;
+            if (vizinhos[index].type === 1) {
+              vizinhos[index] = null
+              continue
+            }
           }
 
           for (let index = 0; index < vizinhos.length; index++) {
-            const element = vizinhos[index];
+            const element = vizinhos[index]
 
-            if (!element) continue;
+            if (!element) continue
 
-            if (listaFechada.includes(element)) continue;
+            if (listaFechada.includes(element)) continue
 
-            let custoG =
-              celulaAtual.g + distancia(celulaAtual, vizinhos[index]);
+            let custoG = celulaAtual.g + distancia(celulaAtual, element)
 
             if (!listaAberta.includes(element)) {
-              listaAberta.push(element);
+              listaAberta.push(element)
             } else if (custoG >= element.g) {
-              continue;
+              vizinhos[index] = undefined
+              continue
             }
 
-            vizinhos[index].parent = celulaAtual;
-            vizinhos[index].g = custoG;
-            vizinhos[index].h = distancia(vizinhos[index], end);
-            vizinhos[index].f = vizinhos[index].g + vizinhos[index].h;
+            vizinhos[index].parent = celulaAtual
+            vizinhos[index].g = custoG
+            vizinhos[index].h = distancia(vizinhos[index], end)
+            vizinhos[index].f = vizinhos[index].g + vizinhos[index].h
           }
         }
 
-        path = [];
+        path = []
         while (celulaAtual != null) {
-          path.push(celulaAtual);
-          celulaAtual = celulaAtual.parent;
+          path.push(celulaAtual)
+          celulaAtual = celulaAtual.parent
         }
 
-        path.reverse();
+        path.reverse()
 
-        path.forEach((value) => {
-          ctx.fillStyle = "rgba(145, 145, 145, 0.50)";
-          ctx.fillRect(value.x, value.y, 48, 48);
-        });
+        drawGrid()
+
+        console.log("Lista Fechada: ")
+        listaFechada.forEach((value) => {
+          console.log(value.position)
+          ctx.fillStyle = "rgba(255, 0, 0, 0.50)"
+          ctx.fillRect(value.x, value.y, 48, 48)
+        })
       }
 
       function distancia(start, end) {
-        let deltaX = Math.abs(start.x - end.x);
-        let deltaY = Math.abs(start.y - end.y);
+        let deltaX = Math.abs(start.x - end.x)
+        let deltaY = Math.abs(start.y - end.y)
 
-        var distancia =
-          Math.max(deltaX, deltaY) +
-          (Math.SQRT2 - 1) * Math.min(deltaX, deltaY);
+        var distancia = Math.max(deltaX, deltaY) + (Math.SQRT2 - 1) * Math.min(deltaX, deltaY)
 
-        return distancia;
+        return distancia
       }
     </script>
   </body>
