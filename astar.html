@@ -29,6 +29,7 @@
     <button id="butB">BT B</button>
 
     <script>
+      console.log(624 + 0.414 * 288)
       const canvas = document.getElementById("tutorial")
       canvas.addEventListener("click", onCanvasClick)
       const ctx = canvas.getContext("2d")
@@ -264,18 +265,19 @@
         path.reverse()
 
         drawGrid()
-
+         
+        // novo codigo
         console.log("Lista Fechada: ")
         listaFechada.forEach((value) => {
           console.log(value.position)
-          ctx.fillStyle = "rgba(255, 0, 0, 0.50)"
+          ctx.fillStyle = "rgba(0, 0, 255, 0.50)"
           ctx.fillRect(value.x, value.y, 48, 48)
         })
       }
 
       function distancia(start, end) {
-        let deltaX = Math.abs(start.x - end.x)
-        let deltaY = Math.abs(start.y - end.y)
+        let deltaX = Math.abs(start.indexX - end.indexX)
+        let deltaY = Math.abs(start.indexY - end.indexY)
 
         var distancia = Math.max(deltaX, deltaY) + (Math.SQRT2 - 1) * Math.min(deltaX, deltaY)
 
