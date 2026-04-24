@@ -175,27 +175,22 @@
         while (listaAberta.length > 0) {
           let melhorIndex = 0
           for (let index = 0; index < listaAberta.length; index++) {
-            if (listaAberta[melhorIndex].f > listaAberta[index].f) {
-              // menor f
+            const itemA = listaAberta[index]
+            const itemB = listaAberta[melhorIndex]
+            if (itemB.f > itemA.f || (itemB.f === itemA.f && itemB.h > itemA.h)) {
+              // menor f e h
               melhorIndex = index
-              celulaAtual = listaAberta[melhorIndex]
-            }
-
-            if (listaAberta[melhorIndex].f === listaAberta[index].f) {
-              if (listaAberta[melhorIndex].h > listaAberta[index].h) {
-                // menor h
-                melhorIndex = index
-                celulaAtual = listaAberta[melhorIndex]
-              }
             }
           }
+
+          celulaAtual = listaAberta[melhorIndex]
 
           if (celulaAtual === end) {
             console.log("Chegamos... Sucesso!")
             break
           }
 
-          listaFechada.push(listaAberta[melhorIndex])
+          listaFechada.push(celulaAtual)
           listaAberta.splice(melhorIndex, 1)
 
           let directions = [
@@ -225,6 +220,17 @@
             )
               continue
 
+            const isDiagonal = rowDirection !== 0 && columnDirection !== 0
+
+            if (isDiagonal) {
+              const cell1 = gridArray[celulaAtual.indexX][celulaAtual.indexY + columnDirection]
+              const cell2 = gridArray[celulaAtual.indexX + rowDirection][celulaAtual.indexY]
+
+              if (cell1.type === 1 || cell2.type === 1) {
+                continue
+              }
+            }
+
             vizinhos[index] = gridArray[nextRowIndex][nextColumnIndex]
 
             if (vizinhos[index].type === 1) {
@@ -244,15 +250,16 @@
 
             if (!listaAberta.includes(element)) {
               listaAberta.push(element)
-            } else if (custoG >= element.g) {
-              vizinhos[index] = undefined
-              continue
-            }
 
-            vizinhos[index].parent = celulaAtual
-            vizinhos[index].g = custoG
-            vizinhos[index].h = distancia(vizinhos[index], end)
-            vizinhos[index].f = vizinhos[index].g + vizinhos[index].h
+              vizinhos[index].parent = celulaAtual
+              vizinhos[index].g = custoG
+              vizinhos[index].h = distancia(vizinhos[index], end)
+              vizinhos[index].f = vizinhos[index].g + vizinhos[index].h
+            } else if (custoG < element.g) {
+              vizinhos[index].parent = celulaAtual
+              vizinhos[index].g = custoG
+              vizinhos[index].f = vizinhos[index].g + vizinhos[index].h
+            }
           }
         }
 
@@ -265,7 +272,7 @@
         path.reverse()
 
         drawGrid()
-         
+
         // novo codigo
         console.log("Lista Fechada: ")
         listaFechada.forEach((value) => {
