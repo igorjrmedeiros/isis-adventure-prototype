@@ -58,25 +58,22 @@ var wave = 1
 var quantityWave = 3
 var waveText
 
-const pixelSize = 48 // pixels
-const totalRows = game.canvas.width / pixelSize
-const totalColumns = game.canvas.height / pixelSize
+const GRID_PIXEL_SIZE = 48 // pixels
+const MAX_GRID_ROWS = 20
+const MAX_GRID_COLUMNS = 16
+const totalRows = game.canvas.width / GRID_PIXEL_SIZE
+const totalColumns = game.canvas.height / GRID_PIXEL_SIZE
 
 var gridArray = []
-
 var gridNumber = 0 //numero da grade
-
 var gridMap = new Map()
-
 var graphics //graficos
-
 var gridCreated = false //gradeCriada
-
 var path = [] //caminho
-
 var tweenFyre = null
-
 var currentPathIndex = 0 //caminhoAtualIndex
+
+var debug = false
 
 // RODA ANTES DO JOGO COMEÇAR
 function preload() {
@@ -188,7 +185,7 @@ function create() {
   objectMove.setImmovable(false) // garantia de fazer ele se mover
 
   // ISIS
-  player = this.physics.add.sprite(60, 100, "isis")
+  player = this.physics.add.sprite(150, 500, "isis")
   player.setCollideWorldBounds(true)
 
   // FYRES A
@@ -211,13 +208,17 @@ function create() {
     // OBJETOS FIXOS
     objectFixo = this.physics.add.staticGroup()
 
-    const platform1 = [140, 141, 142, 143, 144, 145, 146, 147, 148, 149]
-    const platform2 = [269, 270, 271, 272, 273, 274, 275, 276, 277, 278]
-    const platform3 = [116, 136, 156, 176, 196, 216, 236, 256, 276]
+    const platform1 = [
+      140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 116, 136, 156,
+      176, 196, 216, 236, 256, 276,
+    ]
 
     drawPlatformGrid(platform1)
-    drawPlatformGrid(platform2)
-    drawPlatformGrid(platform3)
+
+    platform1.forEach((element) => {
+      const gridElement = gridMap.get(element)
+      gridElement.type = 1
+    })
   }
 
   // COLISÃO E COLETA
@@ -241,20 +242,22 @@ function create() {
 function drawPlatformGrid(gridNumbers) {
   for (let index = 0; index < gridNumbers.length; index++) {
     const element = gridMap.get(gridNumbers[index])
-    objectFixo.create(element.x + pixelSize / 2, element.y + pixelSize / 2, "object").setOrigin(0.5, 0.5)
+    objectFixo.create(element.x + GRID_PIXEL_SIZE / 2, element.y + GRID_PIXEL_SIZE / 2, "object").setOrigin(0.5, 0.5)
   }
 }
 
 function drawBottlesGrid(gridNumbers) {
   for (let index = 0; index < gridNumbers.length; index++) {
     const element = gridMap.get(gridNumbers[index])
-    babyBottles.create(element.x + pixelSize / 2, element.y + pixelSize / 2, "bottle").setOrigin(0.5, 0.5)
+    babyBottles.create(element.x + GRID_PIXEL_SIZE / 2, element.y + GRID_PIXEL_SIZE / 2, "bottle").setOrigin(0.5, 0.5)
   }
 }
 
 function update() {
   player.setVelocityX(0)
   player.setVelocityY(0)
+  fyresA.setVelocityX(0)
+  fyresA.setVelocityY(0)
 
   if (this.keyW.isDown) {
     player.setVelocityY(-200)
@@ -269,17 +272,13 @@ function update() {
     player.setVelocityX(200)
   }
 
-  fyresA.setVelocityX(0)
-  fyresA.setVelocityY(0)
-
   if (gridCreated) {
-    var playerGridPosition = { x: Math.floor(player.y / pixelSize), y: Math.floor(player.x / pixelSize) }
-    var playerGridNumber = gridArray[playerGridPosition.x][playerGridPosition.y]
+    const playerGrid = getGridFromPosition(player.x, player.y)
+    const fyresAGrid = getGridFromPosition(fyresA.x, fyresA.y)
 
-    var fyreAGridPosition = { x: Math.floor(fyresA.y / pixelSize), y: Math.floor(fyresA.x / pixelSize) }
-    var fyreAGridNumber = gridArray[fyreAGridPosition.x][fyreAGridPosition.y]
-
-    a_star(fyreAGridNumber, playerGridNumber)
+    if (playerGrid && fyresAGrid) {
+      a_star(fyresAGrid, playerGrid)
+    }
   }
 }
 
@@ -346,34 +345,84 @@ function updateTimer() {
 
 // criarGrade
 function createGrid(scene) {
-  for (let rowNumber = 0; rowNumber < totalColumns; rowNumber++) {
-    gridArray[rowNumber] = []
-    for (let columnNumber = 0; columnNumber < totalRows; columnNumber++) {
-      const x = columnNumber * pixelSize
-      const y = rowNumber * pixelSize
+  graphics.clear()
+  gridNumber = 0
 
-      graphics.lineStyle(2, "black", 1)
-      graphics.strokeRect(x, y, pixelSize, pixelSize)
+  for (let column = 0; column < MAX_GRID_COLUMNS; column++) {
+    if (!gridArray[column]) {
+      gridArray[column] = []
+    }
 
-      scene.add
-        .text(x + pixelSize / 2, y + pixelSize / 2, gridNumber, { color: "black", align: "center" })
-        .setOrigin(0.5, 0.5).depth = -1
+    for (let row = 0; row < MAX_GRID_ROWS; row++) {
+      const x = row * GRID_PIXEL_SIZE
+      const y = column * GRID_PIXEL_SIZE
 
-      gridArray[rowNumber][columnNumber] = { position: gridNumber, type: 0, g: 0, h: 0, f: 0, parent: null, x: x, y: y }
-      gridMap.set(gridNumber, gridArray[rowNumber][columnNumber])
+      if (debug) {
+        graphics.lineStyle(2, 0xff0000, 1)
+        graphics.strokeRect(x, y, GRID_PIXEL_SIZE, GRID_PIXEL_SIZE)
+      }
 
+      if (!gridArray[column][row]) {
+        if (debug) {
+          scene.add
+            .text(x + GRID_PIXEL_SIZE / 2, y + GRID_PIXEL_SIZE / 2, gridNumber, {
+              color: "black",
+              align: "center",
+            })
+            .setOrigin(0.5, 0.5).depth = -1
+        }
+
+        gridArray[column][row] = {
+          position: gridNumber,
+          type: 0,
+          g: 0,
+          h: 0,
+          f: 0,
+          parent: null,
+          x: x,
+          y: y,
+          indexX: column,
+          indexY: row,
+        }
+      }
+
+      gridMap.set(gridNumber, gridArray[column][row])
       gridNumber++
+    }
+
+    gridCreated = true
+  }
+
+  if (debug) {
+    if (player) {
+      const playerGrid = getGridFromPosition(player.x, player.y)
+      graphics.lineStyle(5, 0x0000ff, 1)
+      graphics.strokeRect(playerGrid.x, playerGrid.y, GRID_PIXEL_SIZE, GRID_PIXEL_SIZE)
+    }
+
+    if (path.length > 0) {
+      path.forEach((value) => {
+        graphics.fillStyle(0x00ff00, 0.5)
+        graphics.fillRect(value.x, value.y, 48, 48)
+      })
     }
   }
 
-  gridCreated = true
+  // gridArray[linhas][colunas]
+}
+
+function getGridFromPosition(x, y) {
+  var gridPosition = { x: Math.floor(x / GRID_PIXEL_SIZE), y: Math.floor(y / GRID_PIXEL_SIZE) }
+  return gridArray[gridPosition.y][gridPosition.x] // invertido para  acessar linha e coluna
 }
 
 // Algoritmo. Caminho de menor custo
 function a_star(start, end) {
-  let listaAberta = [start]
+  let listaAberta = []
   let listaFechada = []
   let celulaAtual = listaAberta[0]
+
+  listaAberta.push(start)
 
   start.g = 0
   start.h = distancia(start, end)
@@ -383,60 +432,94 @@ function a_star(start, end) {
   while (listaAberta.length > 0) {
     let melhorIndex = 0
     for (let index = 0; index < listaAberta.length; index++) {
-      if (listaAberta[melhorIndex].f > listaAberta[index].f) {
-        // menor f
+      const itemA = listaAberta[index]
+      const itemB = listaAberta[melhorIndex]
+      if (itemB.f > itemA.f || (itemB.f === itemA.f && itemB.h > itemA.h)) {
+        // menor f e h
         melhorIndex = index
-        celulaAtual = listaAberta[melhorIndex]
       }
     }
 
+    celulaAtual = listaAberta[melhorIndex]
+
     if (celulaAtual === end) {
-      // console.log("Chegamos... Sucesso!")
+      console.log("Chegamos... Sucesso!")
       break
     }
 
-    listaFechada.push(listaAberta[melhorIndex])
+    listaFechada.push(celulaAtual)
     listaAberta.splice(melhorIndex, 1)
 
-    // logica da vizinhaça
+    let directions = [
+      [0, 1],
+      [0, -1],
+      [1, 0],
+      [-1, 0],
+      [1, 1],
+      [1, -1],
+      [-1, 1],
+      [-1, -1],
+    ]
 
+    // logica da vizinhaça
     let vizinhos = new Array(8)
-    vizinhos[0] = gridMap.get(celulaAtual.position + 1)
-    vizinhos[1] = gridMap.get(celulaAtual.position - 1)
-    vizinhos[2] = gridMap.get(celulaAtual.position - 20)
-    vizinhos[3] = gridMap.get(celulaAtual.position + 20)
-    vizinhos[4] = gridMap.get(celulaAtual.position - 19)
-    vizinhos[5] = gridMap.get(celulaAtual.position + 21)
-    vizinhos[6] = gridMap.get(celulaAtual.position - 21)
-    vizinhos[7] = gridMap.get(celulaAtual.position + 19)
+
+    for (let index = 0; index < vizinhos.length; index++) {
+      let rowDirection = directions[index][0]
+      let columnDirection = directions[index][1]
+
+      let nextRowIndex = celulaAtual.indexX + rowDirection
+      let nextColumnIndex = celulaAtual.indexY + columnDirection
+
+      if (
+        nextRowIndex >= MAX_GRID_COLUMNS ||
+        nextColumnIndex >= MAX_GRID_ROWS ||
+        nextRowIndex < 0 ||
+        nextColumnIndex < 0
+      )
+        continue
+
+      const isDiagonal = rowDirection !== 0 && columnDirection !== 0
+
+      if (isDiagonal) {
+        const cell1 = gridArray[celulaAtual.indexX][celulaAtual.indexY + columnDirection]
+        const cell2 = gridArray[celulaAtual.indexX + rowDirection][celulaAtual.indexY]
+
+        if (cell1.type === 1 || cell2.type === 1) {
+          continue
+        }
+      }
+
+      vizinhos[index] = gridArray[nextRowIndex][nextColumnIndex]
+
+      if (vizinhos[index].type === 1) {
+        vizinhos[index] = null
+        continue
+      }
+    }
 
     for (let index = 0; index < vizinhos.length; index++) {
       const element = vizinhos[index]
 
+      if (!element) continue
+
       if (listaFechada.includes(element)) continue
 
-      let custoG = celulaAtual.g + distancia(celulaAtual, vizinhos[index])
+      let custoG = celulaAtual.g + distancia(celulaAtual, element)
 
       if (!listaAberta.includes(element)) {
         listaAberta.push(element)
-      } else if (custoG >= element.g) {
-        continue
+
+        vizinhos[index].parent = celulaAtual
+        vizinhos[index].g = custoG
+        vizinhos[index].h = distancia(vizinhos[index], end)
+        vizinhos[index].f = vizinhos[index].g + vizinhos[index].h
+      } else if (custoG < element.g) {
+        vizinhos[index].parent = celulaAtual
+        vizinhos[index].g = custoG
+        vizinhos[index].f = vizinhos[index].g + vizinhos[index].h
       }
-
-      vizinhos[index].parent = celulaAtual
-      vizinhos[index].g = custoG
-      vizinhos[index].h = distancia(vizinhos[index], end)
-      vizinhos[index].f = vizinhos[index].g + vizinhos[index].h
     }
-
-    // direita = atual + 1
-    // esquerda = atual - 1
-    // cima = atual - 20
-    // baixo = atual + 20
-    // direita-cima = atual - 19
-    // direita-baixo = atual + 21
-    // esquerda-cima = atual - 21
-    // esquerda-baixa = atual + 19
   }
 
   path = []
@@ -446,11 +529,12 @@ function a_star(start, end) {
   }
 
   path.reverse()
+  createGrid(this) // para mostrar o caminho no grid
 }
 
 function distancia(start, end) {
-  let deltaX = Math.abs(start.x - end.x)
-  let deltaY = Math.abs(start.y - end.y)
+  let deltaX = Math.abs(start.indexX - end.indexX)
+  let deltaY = Math.abs(start.indexY - end.indexY)
 
   var distancia = Math.max(deltaX, deltaY) + (Math.SQRT2 - 1) * Math.min(deltaX, deltaY)
 
