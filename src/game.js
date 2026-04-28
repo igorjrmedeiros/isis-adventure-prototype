@@ -70,6 +70,7 @@ var gridMap = new Map()
 var graphics //graficos
 var gridCreated = false //gradeCriada
 var path = [] //caminho
+
 var tweenFyre = null
 var currentPathIndex = 0 //caminhoAtualIndex
 
@@ -222,7 +223,7 @@ function create() {
   }
 
   // COLISÃO E COLETA
-  //this.physics.add.collider(fyresA, objectFixo);
+  //this.physics.add.collider(fyresA, objectFixo)
   this.physics.add.overlap(player, babyBottles, collectBottle, null, this)
   this.physics.add.collider(player, objectFixo)
   this.physics.add.collider(objectMove, objectFixo)
@@ -273,11 +274,20 @@ function update() {
   }
 
   if (gridCreated) {
-    const playerGrid = getGridFromPosition(player.x, player.y)
-    const fyresAGrid = getGridFromPosition(fyresA.x, fyresA.y)
+    const playerGrid = worldToGrid(player.x, player.y)
+    const fyresAGrid = worldToGrid(fyresA.x, fyresA.y)
 
     if (playerGrid && fyresAGrid) {
       a_star(fyresAGrid, playerGrid)
+      a_star(fyresBGrid, playerGrid)
+      a_star(fyresCGrid, playerGrid)
+    }
+
+    if (path.length > 1) {
+      const targetX = path[1].x + GRID_PIXEL_SIZE / 2
+      const targetY = path[1].y + GRID_PIXEL_SIZE / 2
+      const target = new Phaser.Math.Vector2(targetX, targetY)
+      this.physics.moveToObject(fyresA, target, 200)
     }
   }
 }
@@ -394,12 +404,14 @@ function createGrid(scene) {
   }
 
   if (debug) {
+    // desenha contorno do grid com a posição do player
     if (player) {
-      const playerGrid = getGridFromPosition(player.x, player.y)
+      const playerGrid = worldToGrid(player.x, player.y)
       graphics.lineStyle(5, 0x0000ff, 1)
       graphics.strokeRect(playerGrid.x, playerGrid.y, GRID_PIXEL_SIZE, GRID_PIXEL_SIZE)
     }
 
+    // desenha o caminho
     if (path.length > 0) {
       path.forEach((value) => {
         graphics.fillStyle(0x00ff00, 0.5)
@@ -411,12 +423,27 @@ function createGrid(scene) {
   // gridArray[linhas][colunas]
 }
 
-function getGridFromPosition(x, y) {
+/**
+ * Converte uma coordenada do mundo (pixels) para a célula correspondente no grid
+ * @param {number} x - Coordenada x em espaço do mundo (pixels)
+ * @param {number} y - Coordenada y em espaço do mundo (pixels)
+ * @returns {*} A célula do grid na posição calculada
+ * @description Divide as coordenadas do mundo por GRID_PIXEL_SIZE para determinar
+ * os índices correspondentes do array do grid. Nota: o array é acessado como [y][x]
+ * para mapear corretamente linhas e colunas.
+ */
+function worldToGrid(x, y) {
   var gridPosition = { x: Math.floor(x / GRID_PIXEL_SIZE), y: Math.floor(y / GRID_PIXEL_SIZE) }
-  return gridArray[gridPosition.y][gridPosition.x] // invertido para  acessar linha e coluna
+  return gridArray[gridPosition.y][gridPosition.x]
 }
 
-// Algoritmo. Caminho de menor custo
+/**
+ * Implementação do algoritmo A*
+ * @param {*} start - Célula de início
+ * @param {*} end - Célula de fim
+ * @returns {Array} O caminho encontrado do início ao fim, ou um array vazio se nenhum caminho for encontrado
+ * @description O algoritmo A* é um algoritmo de busca heurística que encontra o caminho mais curto entre um ponto inicial e um ponto final em um grid. Ele utiliza uma função de custo (f) que é a soma do custo do caminho até o ponto atual (g) e uma estimativa do custo restante até o destino (h). O algoritmo mantém uma lista aberta de células a serem avaliados e uma lista fechada de células já avaliadas, expandindo as células com o menor valor de f ou h até encontrar o destino ou esgotar as opções.
+ */
 function a_star(start, end) {
   let listaAberta = []
   let listaFechada = []
@@ -522,13 +549,16 @@ function a_star(start, end) {
     }
   }
 
-  path = []
+  const path = []
   while (celulaAtual != null) {
     path.push(celulaAtual)
     celulaAtual = celulaAtual.parent
   }
 
   path.reverse()
+
+  return path
+
   createGrid(this) // para mostrar o caminho no grid
 }
 
