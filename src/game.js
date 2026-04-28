@@ -69,12 +69,14 @@ var gridNumber = 0 //numero da grade
 var gridMap = new Map()
 var graphics //graficos
 var gridCreated = false //gradeCriada
-var path = [] //caminho
+var pathA = []
+var pathB = []
+// var path = [] //caminho
 
 var tweenFyre = null
 var currentPathIndex = 0 //caminhoAtualIndex
 
-var debug = false
+var debug = true
 
 // RODA ANTES DO JOGO COMEÇAR
 function preload() {
@@ -186,14 +188,22 @@ function create() {
   objectMove.setImmovable(false) // garantia de fazer ele se mover
 
   // ISIS
-  player = this.physics.add.sprite(150, 500, "isis")
+  player = this.physics.add.sprite(0, 0, "isis")
+  //positionAtGrid(player, 0) //posicionar no grid
   player.setCollideWorldBounds(true)
 
   // FYRES A
-  fyresA = this.physics.add.sprite(748, 700, "fyres")
+  fyresA = this.physics.add.sprite(48 * 3, 48 * 10, "fyres")
   fyresA.setCollideWorldBounds(true)
   fyresA.isMoving = false
-  fyresA.velocityA = 0
+  fyresA.velocity = 0
+
+  // FYRES B
+  fyresB = this.physics.add.sprite(600, 350, "fyres")
+
+  fyresB.setCollideWorldBounds(true)
+  fyresB.isMoving = false
+  fyresB.velocity = 0
 
   createGrid(this)
 
@@ -259,6 +269,8 @@ function update() {
   player.setVelocityY(0)
   fyresA.setVelocityX(0)
   fyresA.setVelocityY(0)
+  fyresB.setVelocityX(0)
+  fyresB.setVelocityY(0)
 
   if (this.keyW.isDown) {
     player.setVelocityY(-200)
@@ -276,20 +288,29 @@ function update() {
   if (gridCreated) {
     const playerGrid = worldToGrid(player.x, player.y)
     const fyresAGrid = worldToGrid(fyresA.x, fyresA.y)
+    const fyresBGrid = worldToGrid(fyresB.x, fyresB.y)
 
-    if (playerGrid && fyresAGrid) {
-      a_star(fyresAGrid, playerGrid)
-      a_star(fyresBGrid, playerGrid)
-      a_star(fyresCGrid, playerGrid)
+    if (playerGrid && fyresAGrid && fyresBGrid) {
+      pathA = a_star(fyresAGrid, playerGrid)
+      pathB = a_star(fyresBGrid, playerGrid, 1.3)
     }
 
-    if (path.length > 1) {
-      const targetX = path[1].x + GRID_PIXEL_SIZE / 2
-      const targetY = path[1].y + GRID_PIXEL_SIZE / 2
+    if (pathA.length > 1) {
+      const targetX = pathA[1].x + GRID_PIXEL_SIZE / 2
+      const targetY = pathA[1].y + GRID_PIXEL_SIZE / 2
       const target = new Phaser.Math.Vector2(targetX, targetY)
-      this.physics.moveToObject(fyresA, target, 200)
+      this.physics.moveToObject(fyresA, target, 150)
+    }
+
+    if (pathB.length > 1) {
+      const targetX = pathB[1].x + GRID_PIXEL_SIZE / 2
+      const targetY = pathB[1].y + GRID_PIXEL_SIZE / 2
+      const target = new Phaser.Math.Vector2(targetX, targetY)
+      this.physics.moveToObject(fyresB, target, 130)
     }
   }
+
+  createGrid(this)
 }
 
 // COLEÇAO COM MAMADEIRAS
@@ -412,9 +433,16 @@ function createGrid(scene) {
     }
 
     // desenha o caminho
-    if (path.length > 0) {
-      path.forEach((value) => {
+    if (pathA.length > 0) {
+      pathA.forEach((value) => {
         graphics.fillStyle(0x00ff00, 0.5)
+        graphics.fillRect(value.x, value.y, 48, 48)
+      })
+    }
+
+    if (pathB.length > 0) {
+      pathB.forEach((value) => {
+        graphics.fillStyle(0xffff00, 0.5)
         graphics.fillRect(value.x, value.y, 48, 48)
       })
     }
@@ -444,7 +472,7 @@ function worldToGrid(x, y) {
  * @returns {Array} O caminho encontrado do início ao fim, ou um array vazio se nenhum caminho for encontrado
  * @description O algoritmo A* é um algoritmo de busca heurística que encontra o caminho mais curto entre um ponto inicial e um ponto final em um grid. Ele utiliza uma função de custo (f) que é a soma do custo do caminho até o ponto atual (g) e uma estimativa do custo restante até o destino (h). O algoritmo mantém uma lista aberta de células a serem avaliados e uma lista fechada de células já avaliadas, expandindo as células com o menor valor de f ou h até encontrar o destino ou esgotar as opções.
  */
-function a_star(start, end) {
+function a_star(start, end, complexity = 1) {
   let listaAberta = []
   let listaFechada = []
   let celulaAtual = listaAberta[0]
@@ -532,7 +560,7 @@ function a_star(start, end) {
 
       if (listaFechada.includes(element)) continue
 
-      let custoG = celulaAtual.g + distancia(celulaAtual, element)
+      let custoG = celulaAtual.g + distancia(celulaAtual, element) * complexity
 
       if (!listaAberta.includes(element)) {
         listaAberta.push(element)
@@ -558,20 +586,18 @@ function a_star(start, end) {
   path.reverse()
 
   return path
-
-  createGrid(this) // para mostrar o caminho no grid
 }
 
-function distancia(start, end) {
+function distancia(start, end, complexity = 1) {
   let deltaX = Math.abs(start.indexX - end.indexX)
   let deltaY = Math.abs(start.indexY - end.indexY)
 
-  var distancia = Math.max(deltaX, deltaY) + (Math.SQRT2 - 1) * Math.min(deltaX, deltaY)
+  var distancia = Math.max(deltaX, deltaY) + (complexity * Math.SQRT2 - 1) * Math.min(deltaX, deltaY)
 
   return distancia
 }
 
-/*
+/*\ 
 Mapa:
 960 x 960
 Fundo bege
