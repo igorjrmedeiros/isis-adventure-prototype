@@ -41,14 +41,14 @@ var objectMove
 var score = 0
 var scoreText
 
-const MAX_MAP_TIME = 500 // minutos da fase
+const MAX_MAP_TIME = 5 // segundos da fase
 var timeText
 var timeStop = false // false se chegou no tempo 0
 var timeEvent //guarda o tempo contando a cada segundo
 var timeLeft = MAX_MAP_TIME //decrementa os minutos definido
 
 var ranking = [] // guarda os pontos do score
-var addScore = 0
+var lastScore = 0
 var rankingText
 
 var restartImg
@@ -72,6 +72,8 @@ var gridCreated = false //gradeCriada
 var pathA = []
 var pathB = []
 // var path = [] //caminho
+
+var PLAYER_SPEED = 200
 
 var tweenFyre = null
 var currentPathIndex = 0 //caminhoAtualIndex
@@ -103,10 +105,40 @@ function create() {
   if (gridMap) {
     graphics = this.add.graphics()
   }
-
   var camera = this.cameras.main
 
+  if (wave === 1) {
+    gridArray = []
+    gridMap.clear()
+    createGrid(this)
+    camera.setBackgroundColor("#ffb969")
+
+    // GRUPOS DE MAMADEIRAS
+    babyBottles = this.physics.add.group()
+    const bottlesGrid = [42, 66, 82, 190, 262, 288, 319, 177, 118, 57]
+
+    drawBottlesGrid(bottlesGrid)
+
+    // OBJETOS FIXOS
+    objectFixo = this.physics.add.staticGroup()
+
+    const platform1 = [
+      76, 96, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 116,
+      136, 156, 176, 196, 216, 236, 256, 276,
+    ]
+
+    drawPlatformGrid(platform1)
+
+    platform1.forEach((element) => {
+      const gridElement = gridMap.get(element)
+      gridElement.type = 1
+    })
+  }
+
   if (wave === 2) {
+    gridArray = []
+    gridMap.clear()
+    createGrid(this)
     camera.setBackgroundColor("#153a55")
 
     // GRUPOS DE MAMADEIRAS
@@ -130,6 +162,9 @@ function create() {
   }
 
   if (wave === 3) {
+    gridArray = []
+    gridMap.clear()
+    createGrid(this)
     camera.setBackgroundColor("#3c641b")
 
     // GRUPOS DE MAMADEIRAS
@@ -189,51 +224,25 @@ function create() {
 
   // ISIS
   player = this.physics.add.sprite(0, 0, "isis")
-  //positionAtGrid(player, 0) //posicionar no grid
   player.setCollideWorldBounds(true)
+  positionAtGrid(player, 21) //posicionar no grid
 
   // FYRES A
-  fyresA = this.physics.add.sprite(48 * 3, 48 * 10, "fyres")
+  fyresA = this.physics.add.sprite(0, 0, "fyres")
   fyresA.setCollideWorldBounds(true)
   fyresA.isMoving = false
   fyresA.velocity = 0
+  positionAtGrid(fyresA, 281) //posicionar no grid
 
   // FYRES B
-  fyresB = this.physics.add.sprite(600, 350, "fyres")
-
+  fyresB = this.physics.add.sprite(0, 0, "fyres")
   fyresB.setCollideWorldBounds(true)
   fyresB.isMoving = false
   fyresB.velocity = 0
-
-  createGrid(this)
-
-  if (wave === 1) {
-    camera.setBackgroundColor("#ffb969")
-
-    // GRUPOS DE MAMADEIRAS
-    babyBottles = this.physics.add.group()
-    const bottlesGrid = [42, 66, 82, 190, 262, 288, 319, 177, 118, 57]
-
-    drawBottlesGrid(bottlesGrid)
-
-    // OBJETOS FIXOS
-    objectFixo = this.physics.add.staticGroup()
-
-    const platform1 = [
-      140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 116, 136, 156,
-      176, 196, 216, 236, 256, 276,
-    ]
-
-    drawPlatformGrid(platform1)
-
-    platform1.forEach((element) => {
-      const gridElement = gridMap.get(element)
-      gridElement.type = 1
-    })
-  }
+  positionAtGrid(fyresB, 238) //posicionar no grid
 
   // COLISÃO E COLETA
-  //this.physics.add.collider(fyresA, objectFixo)
+  //this.physics.add.collider(fyresB, objectFixo)
   this.physics.add.overlap(player, babyBottles, collectBottle, null, this)
   this.physics.add.collider(player, objectFixo)
   this.physics.add.collider(objectMove, objectFixo)
@@ -264,26 +273,39 @@ function drawBottlesGrid(gridNumbers) {
   }
 }
 
-function update() {
-  player.setVelocityX(0)
-  player.setVelocityY(0)
-  fyresA.setVelocityX(0)
-  fyresA.setVelocityY(0)
-  fyresB.setVelocityX(0)
-  fyresB.setVelocityY(0)
+function positionAtGrid(object, gridNumber) {
+  const gridElement = gridMap.get(gridNumber) // X: Y:
+  object.x = gridElement.x + GRID_PIXEL_SIZE / 2 //posicionar no centro da celula
+  object.y = gridElement.y + GRID_PIXEL_SIZE / 2 //posicionar no centro da celula
+}
 
+function getDirection() {
+  const direction = new Phaser.Math.Vector2(0, 0) // crio um objeto para armazenar a direção que será retornada
   if (this.keyW.isDown) {
-    player.setVelocityY(-200)
+    direction.y = -1
   }
   if (this.keyA.isDown) {
-    player.setVelocityX(-200)
+    direction.x = -1
   }
   if (this.keyS.isDown) {
-    player.setVelocityY(200)
+    direction.y = 1
   }
   if (this.keyD.isDown) {
-    player.setVelocityX(200)
+    direction.x = 1
   }
+
+  return direction
+}
+
+function update() {
+  player.setVelocity(0, 0)
+  fyresA.setVelocity(0, 0)
+  fyresB.setVelocity(0, 0)
+
+  const direction = getDirection.call(this)
+  direction.normalize() // normaliza a direção para que a velocidade seja constante em todas as direções (diagonal, horizontal, vertical)
+
+  player.setVelocity(direction.x * PLAYER_SPEED, direction.y * PLAYER_SPEED)
 
   if (gridCreated) {
     const playerGrid = worldToGrid(player.x, player.y)
@@ -316,8 +338,43 @@ function update() {
 // COLEÇAO COM MAMADEIRAS
 function collectBottle(player, babyBottles) {
   babyBottles.destroy()
+  addScore(20)
+}
 
-  score += 20
+/**
+ * Adiciona pontos ao score atual e atualiza a exibição do texto de pontuação
+ * @param {number} newScore - A quantidade de pontos a ser adicionada ao score
+ * @returns {void}
+ * @description Incrementa a variável global 'score' com o valor fornecido e
+ * atualiza o texto de score exibido na tela através do objeto 'scoreText'.
+ * Esta função é chamada quando o jogador coleta itens como mamadeiras.
+ */
+function addScore(newScore) {
+  score += newScore
+  scoreText.setText("Score: " + score)
+}
+
+/**
+ * Subtrai pontos do score atual e atualiza a exibição do texto de pontuação
+ * @param {number} newScore - A quantidade de pontos a ser subtraída do score
+ * @returns {void}
+ * @description Decrementa a variável global 'score' com o valor fornecido e
+ * atualiza o texto de score exibido na tela através do objeto 'scoreText'.
+ * Esta função é chamada quando o jogador perde pontos.
+ */
+function subScore(newScore) {
+  score -= newScore
+  scoreText.setText("Score: " + score)
+}
+
+/**
+ * Reseta o score para zero e atualiza a exibição do texto de pontuação
+ * @returns {void}
+ * @description Define a variável global 'score' para zero e atualiza o texto de score exibido na tela através do objeto 'scoreText'.
+ * Esta função pode ser chamada quando o jogador perde ou quando inicia uma nova fase.
+ */
+function resetScore() {
+  score = 0
   scoreText.setText("Score: " + score)
 }
 
@@ -344,7 +401,7 @@ function updateTimer() {
         this.scene.restart()
         timeStop = false
         timeLeft = MAX_MAP_TIME
-        score = 0
+        resetScore()
       })
     }
 
@@ -356,15 +413,15 @@ function updateTimer() {
         this.scene.restart()
         timeStop = false
         timeLeft = MAX_MAP_TIME
-        score = 0
+        resetScore()
       } else {
         levelFase = this.add.image(400, 210, "vitory")
 
         for (let i = 0; i < ranking.length; i++) {
-          addScore += ranking[i]
+          lastScore += ranking[i]
         }
 
-        rankingText = this.add.text(300, 400, "Total: " + addScore, {
+        rankingText = this.add.text(300, 400, "Total: " + lastScore, {
           fontSize: "50px",
           fontFamily: "Arial",
           color: "#ff7b00",
@@ -498,7 +555,7 @@ function a_star(start, end, complexity = 1) {
     celulaAtual = listaAberta[melhorIndex]
 
     if (celulaAtual === end) {
-      console.log("Chegamos... Sucesso!")
+      //console.log("Chegamos... Sucesso!")
       break
     }
 
@@ -510,7 +567,7 @@ function a_star(start, end, complexity = 1) {
       [0, -1],
       [1, 0],
       [-1, 0],
-      [1, 1],
+      [1, 1], // w e d
       [1, -1],
       [-1, 1],
       [-1, -1],
@@ -578,6 +635,11 @@ function a_star(start, end, complexity = 1) {
   }
 
   const path = []
+
+  if (celulaAtual !== end) {
+    return path
+  }
+
   while (celulaAtual != null) {
     path.push(celulaAtual)
     celulaAtual = celulaAtual.parent
@@ -596,21 +658,3 @@ function distancia(start, end, complexity = 1) {
 
   return distancia
 }
-
-/*\ 
-Mapa:
-960 x 960
-Fundo bege
-
-Isis: Quadrado   -> Rosa
-Fyres: Quadrado 
-Anda aleatorio -> Vermelho
-Persegue       -> Azul
-Blocos: Retangulos
-Que movimentam -> Verde
-Estáticos      -> Marrom
-
-Score: texto simples
-
-Tempo: texto simples
-*/
