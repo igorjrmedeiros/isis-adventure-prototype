@@ -41,7 +41,7 @@ var objectMove
 var score = 0
 var scoreText
 
-const MAX_MAP_TIME = 500 // segundos da fase
+const MAX_MAP_TIME = 10 // segundos da fase
 var timeText
 var timeStop = false // false se chegou no tempo 0
 var timeEvent //guarda o tempo contando a cada segundo
@@ -78,7 +78,7 @@ var PLAYER_SPEED = 200
 var tweenFyre = null
 var currentPathIndex = 0 //caminhoAtualIndex
 
-var debug = true
+var debug = false
 
 var fyreBTarget
 
@@ -115,12 +115,6 @@ function create() {
     createGrid(this)
     camera.setBackgroundColor("#ffb969")
 
-    // GRUPOS DE MAMADEIRAS
-    babyBottles = this.physics.add.group()
-    const bottlesGrid = [42, 66, 82, 190, 262, 288, 319, 177, 118, 57]
-
-    drawBottlesGrid(bottlesGrid)
-
     // OBJETOS FIXOS
     objectFixo = this.physics.add.staticGroup()
 
@@ -135,6 +129,25 @@ function create() {
       const gridElement = gridMap.get(element)
       gridElement.type = 1
     })
+
+    // GRUPOS DE MAMADEIRAS
+    babyBottles = this.physics.add.group()
+
+    const bottlesGrid = []
+    let max = 20
+
+    for (let i = 0; i < max; i++) {
+      var value = Phaser.Math.Between(0, 319)
+      if (bottlesGrid.includes(value) || gridMap.get(value).type != 0){
+        i--
+        continue
+      }
+
+      bottlesGrid.push(value)
+    }
+   
+    drawBottlesGrid(bottlesGrid)
+
   }
 
   if (wave === 2) {
@@ -243,7 +256,7 @@ function create() {
   // COLISÃO E COLETA
   //this.physics.add.collider(fyresB, objectFixo)
   this.physics.add.overlap(player, babyBottles, collectBottle, null, this)
-  this.physics.add.overlap(player, fyresA, gameOver, null, this)
+  //this.physics.add.overlap(player, fyresA, gameOver, null, this)
   this.physics.add.overlap(player, fyresB, gameOver, null, this)
   this.physics.add.collider(player, objectFixo)
   this.physics.add.collider(objectMove, objectFixo)
