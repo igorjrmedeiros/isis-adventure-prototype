@@ -74,15 +74,12 @@ var pathB = []
 // var path = [] //caminho
 
 var PLAYER_SPEED = 200
-
 var tweenFyre = null
 var currentPathIndex = 0 //caminhoAtualIndex
-
 var debug = false
-
 var fyreBTarget
 
-// RODA ANTES DO JOGO COMEÇAR
+//carrega imagens, sons, arquivos, antes do jogo começar
 function preload() {
   this.keyA = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A)
   this.keyS = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S)
@@ -103,40 +100,31 @@ function preload() {
   this.load.image("objectMove", "src/assets/objMove.png")
 }
 
-function create() {
-  if (gridMap) {
-    graphics = this.add.graphics()
-  }
-  var camera = this.cameras.main
+function waves(scene, colorWave, arrayPlataform, qtdBottles) {
+  var camera = scene.cameras.main
 
-  if (wave === 1) {
-    gridArray = []
-    gridMap.clear()
-    createGrid(this)
-    camera.setBackgroundColor("#ffb969")
+  gridArray = []
+  gridMap.clear()
+  createGrid(scene)
 
-    // OBJETOS FIXOS
-    objectFixo = this.physics.add.staticGroup()
+  camera.setBackgroundColor(colorWave)
 
-    const platform1 = [
-      76, 96, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 116,
-      136, 156, 176, 196, 216, 236, 256, 276
-    ]
+  // OBJETOS FIXOS
+  objectFixo = scene.physics.add.staticGroup()
 
-    drawPlatformGrid(platform1)
+  drawPlatformGrid(arrayPlataform)
 
-    platform1.forEach((element) => {
-      const gridElement = gridMap.get(element)
-      gridElement.type = 1
-    })
+  arrayPlataform.forEach((element) => {
+    const gridElement = gridMap.get(element)
+    gridElement.type = 1
+  })
 
-    // GRUPOS DE MAMADEIRAS
-    babyBottles = this.physics.add.group()
+  // GRUPOS DE MAMADEIRAS
+  babyBottles = scene.physics.add.group()
 
-    const bottlesGrid = []
-    let max = 20
+  const bottlesGrid = []
 
-    for (let i = 0; i < max; i++) {
+  for (let i = 0; i < qtdBottles; i++) {
       var value = Phaser.Math.Between(0, 319)
       if (bottlesGrid.includes(value) || gridMap.get(value).type != 0){
         i--
@@ -147,62 +135,45 @@ function create() {
     }
    
     drawBottlesGrid(bottlesGrid)
+}
 
+//Monta a cena do jogo depois de tudo carregado
+function create() {
+  if (gridMap) {
+    graphics = this.add.graphics()
+  }
+
+  if (wave === 1) {
+    const platform = [
+      76, 96, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 116,
+      136, 156, 176, 196, 216, 236, 256, 276
+    ]    
+
+    let numberBottles = 20
+
+    waves(this, "#ffb969", platform, numberBottles)
   }
 
   if (wave === 2) {
-    gridArray = []
-    gridMap.clear()
-    createGrid(this)
-    camera.setBackgroundColor("#2d4758")
-
-    // GRUPOS DE MAMADEIRAS
-    babyBottles = this.physics.add.group()
-    const bottlesGrid2 = [42, 66, 82, 190, 262, 288, 319, 177, 118, 57]
-
-    drawBottlesGrid(bottlesGrid2)
-
-
-    // OBJETOS FIXOS
-    objectFixo = this.physics.add.staticGroup()
-    const platform2 = [
+    const platform = [
       76, 96, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 116,
       136, 156, 176, 196, 216, 236, 256, 276
     ]
 
-    drawPlatformGrid(platform2)
+    let numberBottles = 20
 
-    platform2.forEach((element) => {
-      const gridElement = gridMap.get(element)
-      gridElement.type = 1
-    })
+    waves(this, "#2d4758", platform, numberBottles)
   }
 
   if (wave === 3) {
-    gridArray = []
-    gridMap.clear()
-    createGrid(this)
-    camera.setBackgroundColor("#5a3764")
-
-    // GRUPOS DE MAMADEIRAS
-    babyBottles = this.physics.add.group()
-    const bottlesGrid3 = [42, 66, 82, 190, 262, 288, 319, 177, 118, 57]
-
-    drawBottlesGrid(bottlesGrid3)
-
-    // OBJETOS FIXOS
-    objectFixo = this.physics.add.staticGroup()
-    const platform3 = [
+    const platform = [
       76, 96, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 116,
       136, 156, 176, 196, 216, 236, 256, 276
     ]
 
-    drawPlatformGrid(platform3)
+    let numberBottles = 20
 
-    platform3.forEach((element) => {
-      const gridElement = gridMap.get(element)
-      gridElement.type = 1
-    })
+    waves(this, "#5a3764", platform, numberBottles)
   }
 
   //WAVE
@@ -254,13 +225,7 @@ function create() {
   positionAtGrid(fyresB, 238) //posicionar no grid
 
   // COLISÃO E COLETA
-  //this.physics.add.collider(fyresB, objectFixo)
-  this.physics.add.overlap(player, babyBottles, collectBottle, null, this)
-  //this.physics.add.overlap(player, fyresA, gameOver, null, this)
-  this.physics.add.overlap(player, fyresB, gameOver, null, this)
-  this.physics.add.collider(player, objectFixo)
-  this.physics.add.collider(objectMove, objectFixo)
-  this.physics.add.collider(player, objectMove)
+  colliderAndCollection(this)
 
   //TIME
   //this.time relogio phaser
@@ -271,6 +236,16 @@ function create() {
     callbackScope: this, // sem isso no updateTimer, o this vira undefined (this.physics.pause() quebra). this = scene do jogo
     loop: true, //repete infinitamente
   })
+}
+
+function colliderAndCollection(scene) {
+  scene.physics.add.collider(fyresB, objectFixo)
+  scene.physics.add.overlap(player, babyBottles, collectBottle, null, scene)
+  scene.physics.add.overlap(player, fyresA, gameOver, null, scene)
+  scene.physics.add.overlap(player, fyresB, gameOver, null, scene)
+  scene.physics.add.collider(player, objectFixo)
+  scene.physics.add.collider(objectMove, objectFixo)
+  scene.physics.add.collider(player, objectMove)
 }
 
 function randomNumber(maxNumber){
@@ -315,6 +290,7 @@ function getDirection() {
   return direction
 }
 
+//executa continuamente durante o jogo
 function update() {
   player.setVelocity(0, 0)
   fyresA.setVelocity(0, 0)
